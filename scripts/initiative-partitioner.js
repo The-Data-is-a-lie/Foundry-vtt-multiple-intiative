@@ -3,8 +3,6 @@
  * Automatically creates multiple combatant entries when a specific initiative value is rolled
  */
 
-// Store roll data for initiative rolls by combatant ID
-let initiativeRollData = new Map();
 
 Hooks.once("init", () => {
   console.log("Initiative Partitioner | Initializing");
@@ -70,133 +68,6 @@ function isPartition(combatant) {
 }
 
 
-function findsD20(combatant, updateData, options) {
-  let combatantId = combatant.id || combatant._id;
-  let actorId = combatant.actorId || combatant.actor?.id;
-
-  // 1. Check stored roll data from chat hook (most reliable)
-  let storedRoll = initiativeRollData.get(combatantId) || initiativeRollData.get(actorId);
-  if (storedRoll && storedRoll.terms) {
-    let d20Term = storedRoll.terms.find(t => t?.faces === 20);
-    if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
-      let activeResult = d20Term.results.find(r => r?.active !== false);
-      if (activeResult) {
-        let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
-        if (d20Value !== undefined && d20Value !== null) {
-          console.log(`Initiative Partitioner | Found d20 from stored roll data: ${d20Value}`);
-          return d20Value;
-        }
-      }
-    }
-  }
-
-  // 2. Check the options.roll object (The primary source)
-  let roll = options?.roll;
-  if (roll && roll.terms) {
-    let d20Term = roll.terms.find(t => t?.faces === 20);
-    if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
-      // Find the active result (handles advantage/disadvantage)
-      let activeResult = d20Term.results.find(r => r?.active !== false);
-      if (activeResult) {
-        let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
-        if (d20Value !== undefined && d20Value !== null) {
-          console.log(`Initiative Partitioner | Found d20 from options.roll: ${d20Value}`);
-          return d20Value;
-        }
-      }
-    }
-  }
-
-  // 3. Safety Fallback: Check the combatant's internal roll flag
-  let combatantDoc = game.combat?.combatants.get(combatantId);
-  
-  if (combatantDoc?.getFlag) {
-    try {
-      let flagRoll = combatantDoc.getFlag("core", "initiativeRoll");
-      if (flagRoll) {
-        let rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
-        let d20 = rData.terms?.find(t => t?.faces === 20);
-        
-        if (d20 && d20.results && Array.isArray(d20.results)) {
-          // In the flag data, we look for the result that is 'active'
-          let activeResult = d20.results.find(r => r?.active !== false);
-          if (activeResult) {
-            let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
-            if (d20Value !== undefined && d20Value !== null) {
-              console.log(`Initiative Partitioner | Found d20 from combatant flag: ${d20Value}`);
-              return d20Value;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Initiative Partitioner | Error reading combatant flag:", e);
-    }
-  }
-
-  // 4. Try to get from the combatant directly if it has roll data
-  try {
-    if (combatant.getFlag) {
-      let flagRoll = combatant.getFlag("core", "initiativeRoll");
-      if (flagRoll) {
-        let rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
-        let d20 = rData.terms?.find(t => t?.faces === 20);
-        
-        if (d20 && d20.results && Array.isArray(d20.results)) {
-          let activeResult = d20.results.find(r => r?.active !== false);
-          if (activeResult) {
-            let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
-            if (d20Value !== undefined && d20Value !== null) {
-              console.log(`Initiative Partitioner | Found d20 from combatant.getFlag: ${d20Value}`);
-              return d20Value;
-            }
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("Initiative Partitioner | Error reading combatant.getFlag:", e);
-  }
-
-  console.warn(`Initiative Partitioner | Could not find d20 value for combatant ${combatantId}`);
-  return 0; // Return 0 if no d20 was found
-}
-
-/**
- * Hook into chat messages to capture initiative roll data
- * Initiative rolls in FoundryVTT create chat messages with roll data
- */
-Hooks.on("createChatMessage", (chatMessage) => {
-  // Check if this is a roll message (initiative rolls create roll messages)
-  if (chatMessage && chatMessage.isRoll && chatMessage.roll) {
-    let roll = chatMessage.roll;
-    let d20Term = roll.terms?.find(t => t?.faces === 20);
-    
-    // If this roll has a d20, it might be an initiative roll
-    if (d20Term) {
-      // Try to find which combatant this relates to
-      // Check speaker actor and combat context
-      let actorId = chatMessage.speaker?.actor;
-      
-      if (actorId && game.combat) {
-        // Find combatant with this actor
-        let combatants = game.combat.combatants.filter(c => c.actorId === actorId);
-        
-        for (let combatant of combatants) {
-          // Store roll data with combatant ID
-          initiativeRollData.set(combatant.id, roll);
-          console.log(`Initiative Partitioner | Captured roll data for combatant ${combatant.id}:`, roll);
-          
-          // Clean up after 10 seconds (increased from 5 to give more time)
-          setTimeout(() => {
-            initiativeRollData.delete(combatant.id);
-          }, 10000);
-        }
-      }
-    }
-  }
-});
-
 /**
  * Helper function to clean up existing partitions for a combatant
  */
@@ -247,8 +118,10 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Calculating d20 roll
   await new Promise(r => setTimeout(r, 50));
   let totalRoll = updateData.initiative; // e.g., 40
-  let d20Value = findsD20(combatant, updateData, options); // e.g., 15
-  let bonuses = totalRoll - d20Value; // Result: 25
+  let actor = combatant.actor;
+  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
+  let d20Value = totalRoll - initiativeMod; // e.g., 15
+  let bonuses = initiativeMod; // The bonuses are the initiative modifier
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
@@ -310,7 +183,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
-  if (d20Value === 20) {
+  if (20 <= d20Value && d20Value <= 20.999999) {
       let combat = combatant.combat;
       if (!combat) {
         return;
@@ -442,22 +315,11 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
-  // Note: For createCombatant, we need to check if we can access roll data
-  // Since roll data might not be available, we'll try to infer from the actor
-  try {
-    let actor = combatant.actor;
-    if (actor) {
-      let initiativeMod = actor.system?.attributes?.init?.total || 
-                            actor.system?.abilities?.dex?.mod || 0;
-      let otherMods = actor.system?.attributes?.init?.misc || 0;
-      let totalMod = initiativeMod + otherMods;
-      let calculatedRoll = combatant.initiative - totalMod;
-    }
-  } catch (e) {
-    // If calculation fails, skip
-  }
-  
-  if (d20Value === 20) {
+  let actor = combatant.actor;
+  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
+  let d20Value = combatant.initiative - initiativeMod;
+
+  if (20 <= d20Value && d20Value <= 20.999999) {
     let combat = combatant.combat;
     if (!combat) {
       return;
