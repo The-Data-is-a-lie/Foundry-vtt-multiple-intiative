@@ -4,7 +4,7 @@
  */
 
 // Store roll data for initiative rolls by combatant ID
-const initiativeRollData = new Map();
+let initiativeRollData = new Map();
 
 Hooks.once("init", () => {
   console.log("Initiative Partitioner | Initializing");
@@ -71,17 +71,17 @@ function isPartition(combatant) {
 
 
 function findsD20(combatant, updateData, options) {
-  const combatantId = combatant.id || combatant._id;
-  const actorId = combatant.actorId || combatant.actor?.id;
+  let combatantId = combatant.id || combatant._id;
+  let actorId = combatant.actorId || combatant.actor?.id;
 
   // 1. Check stored roll data from chat hook (most reliable)
-  const storedRoll = initiativeRollData.get(combatantId) || initiativeRollData.get(actorId);
+  let storedRoll = initiativeRollData.get(combatantId) || initiativeRollData.get(actorId);
   if (storedRoll && storedRoll.terms) {
-    const d20Term = storedRoll.terms.find(t => t?.faces === 20);
+    let d20Term = storedRoll.terms.find(t => t?.faces === 20);
     if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
-      const activeResult = d20Term.results.find(r => r?.active !== false);
+      let activeResult = d20Term.results.find(r => r?.active !== false);
       if (activeResult) {
-        const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+        let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
         if (d20Value !== undefined && d20Value !== null) {
           console.log(`Initiative Partitioner | Found d20 from stored roll data: ${d20Value}`);
           return d20Value;
@@ -91,14 +91,14 @@ function findsD20(combatant, updateData, options) {
   }
 
   // 2. Check the options.roll object (The primary source)
-  const roll = options?.roll;
+  let roll = options?.roll;
   if (roll && roll.terms) {
-    const d20Term = roll.terms.find(t => t?.faces === 20);
+    let d20Term = roll.terms.find(t => t?.faces === 20);
     if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
       // Find the active result (handles advantage/disadvantage)
-      const activeResult = d20Term.results.find(r => r?.active !== false);
+      let activeResult = d20Term.results.find(r => r?.active !== false);
       if (activeResult) {
-        const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+        let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
         if (d20Value !== undefined && d20Value !== null) {
           console.log(`Initiative Partitioner | Found d20 from options.roll: ${d20Value}`);
           return d20Value;
@@ -108,20 +108,20 @@ function findsD20(combatant, updateData, options) {
   }
 
   // 3. Safety Fallback: Check the combatant's internal roll flag
-  const combatantDoc = game.combat?.combatants.get(combatantId);
+  let combatantDoc = game.combat?.combatants.get(combatantId);
   
   if (combatantDoc?.getFlag) {
     try {
-      const flagRoll = combatantDoc.getFlag("core", "initiativeRoll");
+      let flagRoll = combatantDoc.getFlag("core", "initiativeRoll");
       if (flagRoll) {
-        const rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
-        const d20 = rData.terms?.find(t => t?.faces === 20);
+        let rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
+        let d20 = rData.terms?.find(t => t?.faces === 20);
         
         if (d20 && d20.results && Array.isArray(d20.results)) {
           // In the flag data, we look for the result that is 'active'
-          const activeResult = d20.results.find(r => r?.active !== false);
+          let activeResult = d20.results.find(r => r?.active !== false);
           if (activeResult) {
-            const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+            let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
             if (d20Value !== undefined && d20Value !== null) {
               console.log(`Initiative Partitioner | Found d20 from combatant flag: ${d20Value}`);
               return d20Value;
@@ -137,15 +137,15 @@ function findsD20(combatant, updateData, options) {
   // 4. Try to get from the combatant directly if it has roll data
   try {
     if (combatant.getFlag) {
-      const flagRoll = combatant.getFlag("core", "initiativeRoll");
+      let flagRoll = combatant.getFlag("core", "initiativeRoll");
       if (flagRoll) {
-        const rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
-        const d20 = rData.terms?.find(t => t?.faces === 20);
+        let rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
+        let d20 = rData.terms?.find(t => t?.faces === 20);
         
         if (d20 && d20.results && Array.isArray(d20.results)) {
-          const activeResult = d20.results.find(r => r?.active !== false);
+          let activeResult = d20.results.find(r => r?.active !== false);
           if (activeResult) {
-            const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+            let d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
             if (d20Value !== undefined && d20Value !== null) {
               console.log(`Initiative Partitioner | Found d20 from combatant.getFlag: ${d20Value}`);
               return d20Value;
@@ -169,20 +169,20 @@ function findsD20(combatant, updateData, options) {
 Hooks.on("createChatMessage", (chatMessage) => {
   // Check if this is a roll message (initiative rolls create roll messages)
   if (chatMessage && chatMessage.isRoll && chatMessage.roll) {
-    const roll = chatMessage.roll;
-    const d20Term = roll.terms?.find(t => t?.faces === 20);
+    let roll = chatMessage.roll;
+    let d20Term = roll.terms?.find(t => t?.faces === 20);
     
     // If this roll has a d20, it might be an initiative roll
     if (d20Term) {
       // Try to find which combatant this relates to
       // Check speaker actor and combat context
-      const actorId = chatMessage.speaker?.actor;
+      let actorId = chatMessage.speaker?.actor;
       
       if (actorId && game.combat) {
         // Find combatant with this actor
-        const combatants = game.combat.combatants.filter(c => c.actorId === actorId);
+        let combatants = game.combat.combatants.filter(c => c.actorId === actorId);
         
-        for (const combatant of combatants) {
+        for (let combatant of combatants) {
           // Store roll data with combatant ID
           initiativeRollData.set(combatant.id, roll);
           console.log(`Initiative Partitioner | Captured roll data for combatant ${combatant.id}:`, roll);
@@ -203,14 +203,14 @@ Hooks.on("createChatMessage", (chatMessage) => {
 async function cleanupPartitions(combat, originalCombatantId) {
   if (!combat) return;
   
-  const combatants = combat.combatants;
-  const partitionsToDelete = combatants.filter(c => 
+  let combatants = combat.combatants;
+  let partitionsToDelete = combatants.filter(c => 
     c.flags?.["initiative-partitioner"]?.originalId === originalCombatantId &&
     c.flags?.["initiative-partitioner"]?.natural20Duplicate !== true // Don't delete natural 20 duplicates here
   );
   
   if (partitionsToDelete.length > 0) {
-    const idsToDelete = partitionsToDelete.map(c => c.id);
+    let idsToDelete = partitionsToDelete.map(c => c.id);
     await combat.deleteEmbeddedDocuments("Combatant", idsToDelete);
     console.log(`Initiative Partitioner | Cleaned up ${idsToDelete.length} existing partitions`);
   }
@@ -240,26 +240,26 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     return;
   }
 
-  const targetInitiative = game.settings.get("initiative-partitioner", "targetInitiative");
-  const partitionCount = game.settings.get("initiative-partitioner", "partitionCount");
-  const partitionOffset = game.settings.get("initiative-partitioner", "partitionOffset");
+  let targetInitiative = game.settings.get("initiative-partitioner", "targetInitiative");
+  let partitionCount = game.settings.get("initiative-partitioner", "partitionCount");
+  let partitionOffset = game.settings.get("initiative-partitioner", "partitionOffset");
 
   // Calculating d20 roll
   await new Promise(r => setTimeout(r, 50));
-  const totalRoll = updateData.initiative; // e.g., 40
-  const d20Value = findsD20(combatant, updateData, options); // e.g., 15
-  const bonuses = totalRoll - d20Value; // Result: 25
+  let totalRoll = updateData.initiative; // e.g., 40
+  let d20Value = findsD20(combatant, updateData, options); // e.g., 15
+  let bonuses = totalRoll - d20Value; // Result: 25
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
   // Check if the rolled initiative is greater than or equal to the target value
   if (bonuses >= targetInitiative) {
     // Subtract from the intiative value to get the bonuses only
-    const rolledInitiative = (updateData.initiative - d20Value);
+    let rolledInitiative = (updateData.initiative - d20Value);
     console.log(`Initiative Partitioner | Detected initiative ${rolledInitiative} (>= ${targetInitiative + d20Value}) for ${combatant.name}`);
     
     // Get the combat instance
-    const combat = combatant.combat;
+    let combat = combatant.combat;
     if (!combat) {
       console.warn("Initiative Partitioner | No combat instance found");
       return;
@@ -272,13 +272,13 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // Create additional combatant entries with partitioned initiative values
-    const combatantData = combatant.toObject();
+    let combatantData = combatant.toObject();
     
     // Remove fields that shouldn't be copied
-    const { _id, sort, ...cleanData } = combatantData;
+    let { _id, sort, ...cleanData } = combatantData;
     
     for (let i = 1; i < partitionCount; i++) {
-      const newInitiative = rolledInitiative - (i * partitionOffset);
+      let newInitiative = rolledInitiative - (i * partitionOffset);
       
       // Only create if the new initiative is positive
       if (newInitiative > 0) {
@@ -311,33 +311,33 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
   if (d20Value === 20) {
-      const combat = combatant.combat;
+      let combat = combatant.combat;
       if (!combat) {
         return;
       }
     // Check if it's turn 1 (round 1) of combat
     // If combat hasn't started or is on round 1, create duplicate
-    const isTurn1 = !combat.started || combat.round === 1;
+    let isTurn1 = !combat.started || combat.round === 1;
     
     if (isTurn1) {
       // Wait for partitions to be created first (if any)
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Get the updated combatant to find the highest initiative value
-      const updatedCombatant = combat.combatants.get(combatant.id);
+      let updatedCombatant = combat.combatants.get(combatant.id);
       if (!updatedCombatant) return;
       
       // Find all combatants with same original (including partitions)
-      const allRelatedCombatants = combat.combatants.filter(c => 
+      let allRelatedCombatants = combat.combatants.filter(c => 
         c.id === updatedCombatant.id || 
         c.flags?.["initiative-partitioner"]?.originalId === updatedCombatant.id
       );
       
       // Find the highest initiative value
-      const highestInitiative = Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
+      let highestInitiative = Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
       
       // Check if we already created a natural 20 duplicate
-      const hasNatural20Duplicate = allRelatedCombatants.some(c => 
+      let hasNatural20Duplicate = allRelatedCombatants.some(c => 
         c.flags?.["initiative-partitioner"]?.natural20Duplicate === true
       );
       
@@ -345,9 +345,9 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
         console.log(`Initiative Partitioner | Natural 20 on Turn 1! Creating duplicate with initiative ${highestInitiative}`);
         
         try {
-          const combatantData = updatedCombatant.toObject();
+          let combatantData = updatedCombatant.toObject();
           // Remove fields that shouldn't be copied
-          const { _id, sort, ...cleanData } = combatantData;
+          let { _id, sort, ...cleanData } = combatantData;
           
           await combat.createEmbeddedDocuments("Combatant", [{
             ...cleanData,
@@ -388,16 +388,16 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
     return;
   }
 
-  const targetInitiative = game.settings.get("initiative-partitioner", "targetInitiative");
-  const partitionCount = game.settings.get("initiative-partitioner", "partitionCount");
-  const partitionOffset = game.settings.get("initiative-partitioner", "partitionOffset");
+  let targetInitiative = game.settings.get("initiative-partitioner", "targetInitiative");
+  let partitionCount = game.settings.get("initiative-partitioner", "partitionCount");
+  let partitionOffset = game.settings.get("initiative-partitioner", "partitionOffset");
 
   // Check if the initiative is greater than or equal to the target value
   if (combatant.initiative >= targetInitiative) {
-    const rolledInitiative = combatant.initiative;
+    let rolledInitiative = combatant.initiative;
     console.log(`Initiative Partitioner | Detected initiative ${rolledInitiative} (>= ${targetInitiative}) on creation for ${combatant.name}`);
     
-    const combat = combatant.combat;
+    let combat = combatant.combat;
     if (!combat) {
       return;
     }
@@ -406,13 +406,13 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // Create additional combatant entries
-    const combatantData = combatant.toObject();
+    let combatantData = combatant.toObject();
     
     // Remove fields that shouldn't be copied
-    const { _id, sort, ...cleanData } = combatantData;
+    let { _id, sort, ...cleanData } = combatantData;
     
     for (let i = 1; i < partitionCount; i++) {
-      const newInitiative = rolledInitiative - (i * partitionOffset);
+      let newInitiative = rolledInitiative - (i * partitionOffset);
       
       if (newInitiative > 0) {
         try {
@@ -445,46 +445,46 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
   // Note: For createCombatant, we need to check if we can access roll data
   // Since roll data might not be available, we'll try to infer from the actor
   try {
-    const actor = combatant.actor;
+    let actor = combatant.actor;
     if (actor) {
-      const initiativeMod = actor.system?.attributes?.init?.total || 
+      let initiativeMod = actor.system?.attributes?.init?.total || 
                             actor.system?.abilities?.dex?.mod || 0;
-      const otherMods = actor.system?.attributes?.init?.misc || 0;
-      const totalMod = initiativeMod + otherMods;
-      const calculatedRoll = combatant.initiative - totalMod;
+      let otherMods = actor.system?.attributes?.init?.misc || 0;
+      let totalMod = initiativeMod + otherMods;
+      let calculatedRoll = combatant.initiative - totalMod;
     }
   } catch (e) {
     // If calculation fails, skip
   }
   
   if (d20Value === 20) {
-    const combat = combatant.combat;
+    let combat = combatant.combat;
     if (!combat) {
       return;
     }
 
     // Check if it's turn 1 (round 1) of combat
-    const isTurn1 = !combat.started || combat.round === 1;
+    let isTurn1 = !combat.started || combat.round === 1;
     
     if (isTurn1) {
       // Wait for partitions to be created first (if any)
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Get the combatant again to find the highest initiative value
-      const updatedCombatant = combat.combatants.get(combatant.id);
+      let updatedCombatant = combat.combatants.get(combatant.id);
       if (!updatedCombatant) return;
       
       // Find all combatants with same original (including partitions)
-      const allRelatedCombatants = combat.combatants.filter(c => 
+      let allRelatedCombatants = combat.combatants.filter(c => 
         c.id === updatedCombatant.id || 
         c.flags?.["initiative-partitioner"]?.originalId === updatedCombatant.id
       );
       
       // Find the highest initiative value
-      const highestInitiative = Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
+      let highestInitiative = Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
       
       // Check if we already created a natural 20 duplicate
-      const hasNatural20Duplicate = allRelatedCombatants.some(c => 
+      let hasNatural20Duplicate = allRelatedCombatants.some(c => 
         c.flags?.["initiative-partitioner"]?.natural20Duplicate === true
       );
       
@@ -492,9 +492,9 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
         console.log(`Initiative Partitioner | Natural 20 on Turn 1! Creating duplicate with initiative ${highestInitiative}`);
         
         try {
-          const combatantData = updatedCombatant.toObject();
+          let combatantData = updatedCombatant.toObject();
           // Remove fields that shouldn't be copied
-          const { _id, sort, ...cleanData } = combatantData;
+          let { _id, sort, ...cleanData } = combatantData;
           
           await combat.createEmbeddedDocuments("Combatant", [{
             ...cleanData,
