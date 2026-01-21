@@ -69,85 +69,97 @@ function isPartition(combatant) {
   return combatant?.flags?.["initiative-partitioner"]?.isPartition === true;
 }
 
-/**
- * Helper function to check if a d20 roll was a natural 20
- */
-function isNatural20(combatant, updateData, options) {
+
+function findsD20(combatant, updateData, options) {
   const combatantId = combatant.id || combatant._id;
   const actorId = combatant.actorId || combatant.actor?.id;
-  
-  console.log(`Initiative Partitioner | Checking for natural 20 - combatantId: ${combatantId}, actorId: ${actorId}`);
-  
-  // 1. Check our stored roll data from diceRoll hook
+
+  // 1. Check stored roll data from chat hook (most reliable)
   const storedRoll = initiativeRollData.get(combatantId) || initiativeRollData.get(actorId);
-  if (storedRoll) {
-    console.log(`Initiative Partitioner | Found stored roll data:`, storedRoll);
-    const d20Term = storedRoll.terms?.find(t => t?.faces === 20);
+  if (storedRoll && storedRoll.terms) {
+    const d20Term = storedRoll.terms.find(t => t?.faces === 20);
     if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
-      const natural20Found = d20Term.results.some(r => {
-        const result = r?.result ?? r?.value ?? r?.total;
-        const isActive = r?.active !== false;
-        console.log(`Initiative Partitioner | Stored roll d20 check: result=${result}, active=${isActive}`);
-        return result === 20 && isActive;
-      });
-      if (natural20Found) {
-        console.log(`Initiative Partitioner | ✓ Detected natural 20 from stored roll: d20 rolled 20`);
-        return true;
-      }
-    }
-  }
-  
-  // 2. Check the options.roll object
-  const roll = options?.roll;
-  if (roll && roll.terms) {
-    const d20Term = roll.terms.find(t => t?.faces === 20);
-    if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
-      const natural20Found = d20Term.results.some(r => {
-        const result = r?.result ?? r?.value ?? r?.total;
-        const isActive = r?.active !== false;
-        return result === 20 && isActive;
-      });
-      if (natural20Found) {
-        console.log(`Initiative Partitioner | ✓ Detected natural 20 from options.roll: d20 rolled 20`);
-        return true;
+      const activeResult = d20Term.results.find(r => r?.active !== false);
+      if (activeResult) {
+        const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+        if (d20Value !== undefined && d20Value !== null) {
+          console.log(`Initiative Partitioner | Found d20 from stored roll data: ${d20Value}`);
+          return d20Value;
+        }
       }
     }
   }
 
-  // 3. Check the combatant's internal roll flag
-  if (game.combat) {
+  // 2. Check the options.roll object (The primary source)
+  const roll = options?.roll;
+  if (roll && roll.terms) {
+    const d20Term = roll.terms.find(t => t?.faces === 20);
+    if (d20Term && d20Term.results && Array.isArray(d20Term.results)) {
+      // Find the active result (handles advantage/disadvantage)
+      const activeResult = d20Term.results.find(r => r?.active !== false);
+      if (activeResult) {
+        const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+        if (d20Value !== undefined && d20Value !== null) {
+          console.log(`Initiative Partitioner | Found d20 from options.roll: ${d20Value}`);
+          return d20Value;
+        }
+      }
+    }
+  }
+
+  // 3. Safety Fallback: Check the combatant's internal roll flag
+  const combatantDoc = game.combat?.combatants.get(combatantId);
+  
+  if (combatantDoc?.getFlag) {
     try {
-      const combatId = combatant.combat?.id || game.combat.id;
-      const combatDoc = game.combats.get(combatId);
-      const combatantDoc = combatDoc?.combatants.get(combatantId);
-      
-      if (combatantDoc?.getFlag) {
-        const flagRoll = combatantDoc.getFlag("core", "initiativeRoll");
-        if (flagRoll) {
-          const rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
-          if (rData && rData.terms) {
-            const d20 = rData.terms.find(t => t?.faces === 20);
-            if (d20 && d20.results && Array.isArray(d20.results)) {
-              const natural20Found = d20.results.some(r => {
-                const result = r?.result ?? r?.value ?? r?.total;
-                const isActive = r?.active !== false;
-                return result === 20 && isActive;
-              });
-              if (natural20Found) {
-                console.log(`Initiative Partitioner | ✓ Detected natural 20 from combatant flag: d20 rolled 20`);
-                return true;
-              }
+      const flagRoll = combatantDoc.getFlag("core", "initiativeRoll");
+      if (flagRoll) {
+        const rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
+        const d20 = rData.terms?.find(t => t?.faces === 20);
+        
+        if (d20 && d20.results && Array.isArray(d20.results)) {
+          // In the flag data, we look for the result that is 'active'
+          const activeResult = d20.results.find(r => r?.active !== false);
+          if (activeResult) {
+            const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+            if (d20Value !== undefined && d20Value !== null) {
+              console.log(`Initiative Partitioner | Found d20 from combatant flag: ${d20Value}`);
+              return d20Value;
             }
           }
         }
       }
     } catch (e) {
-      console.warn("Initiative Partitioner | Error checking combatant flag for natural 20:", e);
+      console.warn("Initiative Partitioner | Error reading combatant flag:", e);
     }
   }
 
-  console.log(`Initiative Partitioner | No natural 20 detected - roll data not found or d20 was not 20`);
-  return false;
+  // 4. Try to get from the combatant directly if it has roll data
+  try {
+    if (combatant.getFlag) {
+      const flagRoll = combatant.getFlag("core", "initiativeRoll");
+      if (flagRoll) {
+        const rData = typeof flagRoll === "string" ? JSON.parse(flagRoll) : flagRoll;
+        const d20 = rData.terms?.find(t => t?.faces === 20);
+        
+        if (d20 && d20.results && Array.isArray(d20.results)) {
+          const activeResult = d20.results.find(r => r?.active !== false);
+          if (activeResult) {
+            const d20Value = activeResult.result ?? activeResult.value ?? activeResult.total;
+            if (d20Value !== undefined && d20Value !== null) {
+              console.log(`Initiative Partitioner | Found d20 from combatant.getFlag: ${d20Value}`);
+              return d20Value;
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Initiative Partitioner | Error reading combatant.getFlag:", e);
+  }
+
+  console.warn(`Initiative Partitioner | Could not find d20 value for combatant ${combatantId}`);
+  return 0; // Return 0 if no d20 was found
 }
 
 /**
@@ -175,10 +187,10 @@ Hooks.on("createChatMessage", (chatMessage) => {
           initiativeRollData.set(combatant.id, roll);
           console.log(`Initiative Partitioner | Captured roll data for combatant ${combatant.id}:`, roll);
           
-          // Clean up after 5 seconds
+          // Clean up after 10 seconds (increased from 5 to give more time)
           setTimeout(() => {
             initiativeRollData.delete(combatant.id);
-          }, 5000);
+          }, 10000);
         }
       }
     }
@@ -232,10 +244,19 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   const partitionCount = game.settings.get("initiative-partitioner", "partitionCount");
   const partitionOffset = game.settings.get("initiative-partitioner", "partitionOffset");
 
+  // Calculating d20 roll
+  await new Promise(r => setTimeout(r, 50));
+  const totalRoll = updateData.initiative; // e.g., 40
+  const d20Value = findsD20(combatant, updateData, options); // e.g., 15
+  const bonuses = totalRoll - d20Value; // Result: 25
+
+  console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
+
   // Check if the rolled initiative is greater than or equal to the target value
-  if (updateData.initiative >= targetInitiative) {
-    const rolledInitiative = updateData.initiative;
-    console.log(`Initiative Partitioner | Detected initiative ${rolledInitiative} (>= ${targetInitiative}) for ${combatant.name}`);
+  if (bonuses >= targetInitiative) {
+    // Subtract from the intiative value to get the bonuses only
+    const rolledInitiative = (updateData.initiative - d20Value);
+    console.log(`Initiative Partitioner | Detected initiative ${rolledInitiative} (>= ${targetInitiative + d20Value}) for ${combatant.name}`);
     
     // Get the combat instance
     const combat = combatant.combat;
@@ -289,34 +310,11 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
-  // Check immediately, and also check after a delay in case roll data isn't saved yet
-  const checkNatural20 = async () => {
-    // First check immediately
-    if (isNatural20(combatant, updateData, options)) {
-      return true;
-    }
-    
-    // If not found, wait a bit and check the combatant's saved flag
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Re-check with updated combatant
-    const combat = combatant.combat || game.combat;
-    if (combat) {
-      const updatedCombatant = combat.combatants.get(combatant.id);
-      if (updatedCombatant) {
-        return isNatural20(updatedCombatant, updateData, {});
+  if (d20Value === 20) {
+      const combat = combatant.combat;
+      if (!combat) {
+        return;
       }
-    }
-    
-    return false;
-  };
-  
-  if (await checkNatural20()) {
-    const combat = combatant.combat;
-    if (!combat) {
-      return;
-    }
-
     // Check if it's turn 1 (round 1) of combat
     // If combat hasn't started or is on round 1, create duplicate
     const isTurn1 = !combat.started || combat.round === 1;
@@ -444,8 +442,22 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
-  // Use the same isNatural20 function to check roll data
-  if (isNatural20(combatant, { initiative: combatant.initiative }, options)) {
+  // Note: For createCombatant, we need to check if we can access roll data
+  // Since roll data might not be available, we'll try to infer from the actor
+  try {
+    const actor = combatant.actor;
+    if (actor) {
+      const initiativeMod = actor.system?.attributes?.init?.total || 
+                            actor.system?.abilities?.dex?.mod || 0;
+      const otherMods = actor.system?.attributes?.init?.misc || 0;
+      const totalMod = initiativeMod + otherMods;
+      const calculatedRoll = combatant.initiative - totalMod;
+    }
+  } catch (e) {
+    // If calculation fails, skip
+  }
+  
+  if (d20Value === 20) {
     const combat = combatant.combat;
     if (!combat) {
       return;
