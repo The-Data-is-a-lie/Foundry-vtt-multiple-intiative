@@ -1,0 +1,23 @@
+{
+  "id": "Foundry-vtt-multiple-intiative",
+  "title": "Initiative Partitioner",
+  "description": "Automatically partitions initiative rolls into multiple combatant entries. When a creature rolls a specific initiative value, it creates multiple appearances on the initiative tracker with partitioned values.",
+  "version": "1.0.0",
+  "author": "TableTopSoftware",
+  "minimumCoreVersion": "10.0.0",
+  "compatibleCoreVersion": "10.0.0",
+  "esmodules": [
+    "scripts/initiative-partitioner.js"
+  ],
+  "styles": [],
+  "packs": [],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "dependencies": []
+}

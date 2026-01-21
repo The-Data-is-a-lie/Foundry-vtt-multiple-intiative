@@ -1,0 +1,6 @@
+{
+  "initiative-partitioner": {
+    "name": "Initiative Partitioner",
+    "description": "Automatically partitions initiative rolls into multiple combatant entries"
+  }
+}
