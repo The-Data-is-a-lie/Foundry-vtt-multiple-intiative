@@ -209,7 +209,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
       );
       
       // Find the highest initiative value
-      let highestInitiative = Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
+      let highestInitiative = 100 + Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
       
       // Check if we already created a natural 20 duplicate
       let hasNatural20Duplicate = allRelatedCombatants.some(c => 
@@ -315,72 +315,7 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
     }
   }
 
-  // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
-  // Check if the d20 roll itself was 20, not just the total
-  let actor = combatant.actor;
-  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
-  let d20Value = combatant.initiative - initiativeMod;
-
-  if (20 <= d20Value && d20Value <= 20.999999) {
-    let combat = combatant.combat;
-    if (!combat) {
-      return;
-    }
-
-    // Check if it's turn 1 (round 1) of combat
-    let isTurn1 = !combat.started || combat.round === 1;
-    
-    if (isTurn1) {
-      // Wait for partitions to be created first (if any)
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Get the combatant again to find the highest initiative value
-      let updatedCombatant = combat.combatants.get(combatant.id);
-      if (!updatedCombatant) return;
-      
-      // Find all combatants with same original (including partitions)
-      let allRelatedCombatants = combat.combatants.filter(c => 
-        c.id === updatedCombatant.id || 
-        c.flags?.["initiative-partitioner"]?.originalId === updatedCombatant.id
-      );
-      
-      // Find the highest initiative value
-      let highestInitiative = Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
-      
-      // Check if we already created a natural 20 duplicate
-      let hasNatural20Duplicate = allRelatedCombatants.some(c => 
-        c.flags?.["initiative-partitioner"]?.natural20Duplicate === true
-      );
-      
-      if (!hasNatural20Duplicate && highestInitiative > 0) {
-        console.log(`Initiative Partitioner | Natural 20 on Turn 1! Creating duplicate with initiative ${highestInitiative}`);
-        
-        try {
-          let combatantData = updatedCombatant.toObject();
-          // Remove fields that shouldn't be copied
-          let { _id, sort, ...cleanData } = combatantData;
-          
-          await combat.createEmbeddedDocuments("Combatant", [{
-            ...cleanData,
-            initiative: highestInitiative,
-            flags: {
-              ...(cleanData.flags || {}),
-              "initiative-partitioner": {
-                natural20Duplicate: true,
-                originalId: updatedCombatant.id
-              }
-            }
-          }], { fromPartition: true });
-          
-          console.log(`Initiative Partitioner | Created natural 20 duplicate with initiative ${highestInitiative}`);
-        } catch (error) {
-          console.error(`Initiative Partitioner | Error creating natural 20 duplicate:`, error);
-        }
-      }
-    }
-  }
 });
-
 /**
  * Clean up partitions when combat ends or is deleted
  */
