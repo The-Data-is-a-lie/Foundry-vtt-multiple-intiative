@@ -183,7 +183,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
-  if (20 <= d20Value && d20Value <= 20.999999) {
+  if (20 <= d20Value && d20Value <= 20.999999 && isTurn1) {
       let combat = combatant.combat;
       if (!combat) {
         return;
@@ -319,7 +319,7 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let d20Value = combatant.initiative - initiativeMod;
 
-  if (20 <= d20Value && d20Value <= 20.999999) {
+  if (20 <= d20Value && d20Value <= 20.999999 && isTurn1) {
     let combat = combatant.combat;
     if (!combat) {
       return;
