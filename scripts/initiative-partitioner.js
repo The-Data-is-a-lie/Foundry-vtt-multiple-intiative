@@ -183,7 +183,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
-  if (20 <= d20Value && d20Value <= 20.999999 && isTurn1) {
+  if (20 <= d20Value && d20Value <= 20.999999) {
       let combat = combatant.combat;
       if (!combat) {
         return;
@@ -191,6 +191,8 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     // Check if it's turn 1 (round 1) of combat
     // If combat hasn't started or is on round 1, create duplicate
     let isTurn1 = !combat.started || combat.round === 1;
+
+    console.log("isTurn1:", isTurn1);
     
     if (isTurn1) {
       // Wait for partitions to be created first (if any)
@@ -319,7 +321,7 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let d20Value = combatant.initiative - initiativeMod;
 
-  if (20 <= d20Value && d20Value <= 20.999999 && isTurn1) {
+  if (20 <= d20Value && d20Value <= 20.999999) {
     let combat = combatant.combat;
     if (!combat) {
       return;
