@@ -120,12 +120,29 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
   let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+  let isNat20 = d20Value >= 20 && d20Value < 21;
 
-  // // Check for Natural 20
-  // if (20 <= d20Value && d20Value <= 20.999999) {
-  //     console.log("Natural 20 detected on initiative roll for", combatant.name);
-  //   totalRoll += Natural20Boost;
-  // }
+
+  // Adds a boost to the original roll if a natural 20 is detected
+  if (isNat20) {
+    console.log("multiple-initiatives | Natural 20 detected for", combatant.name);
+
+    // Prevent double-boosting
+    if (!combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
+      await combatant.update(
+        {
+          initiative: totalRoll + Natural20Boost,
+          flags: {
+            "multiple-initiatives": {
+              ...(combatant.flags?.["multiple-initiatives"] || {}),
+              natural20Applied: true
+            }
+          }
+        },
+        { fromPartition: true }
+      );
+    }
+  }
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
@@ -190,7 +207,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Check if the d20 roll itself was 20, not just the total
 
   // Tie Breaker logic = +1% Base to roll value -> we need to account for tie breaker logic
-  if (20 <= d20Value && d20Value <= 20.999999) {
+  if (isNat20) {
       let combat = combatant.combat;
       if (!combat) {
         return;
