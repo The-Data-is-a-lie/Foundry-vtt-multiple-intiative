@@ -121,8 +121,8 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let actor = combatant.actor;
   let actorName = actor?.name || "Unknown";
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
-  let d20Value = totalRoll - initiativeMod; // e.g., 15
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
+  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
@@ -185,6 +185,8 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
+
+  // Tie Breaker logic = +1% Base to roll value -> we need to account for tie breaker logic
   if (20 <= d20Value && d20Value <= 20.999999) {
       let combat = combatant.combat;
       if (!combat) {
@@ -260,21 +262,21 @@ Hooks.on("createCombatant", async (combatant, options, userId) => {
     return;
   }
 
-  console.log("Edge Case 1 | createCombatant hook called, but partitioning is handled in updateCombatant");
+  // console.log("Edge Case 1 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
   // Check if this is a user-initiated creation (not from our module)
   if (options.fromPartition) {
     return;
   }
 
-  console.log("Edge Case 2 | createCombatant hook called, but partitioning is handled in updateCombatant");
+  // console.log("Edge Case 2 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
   // Skip if this is already a partition or natural 20 duplicate
   if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
     return;
   }
 
-  console.log("Edge Case 3 | createCombatant hook called, but partitioning is handled in updateCombatant");
+  // console.log("Edge Case 3 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
   // Only process if initiative is already set (not undefined/null)
   // This prevents the hook from firing during combatant creation before initiative is rolled
