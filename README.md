@@ -1,4 +1,4 @@
-# Initiative Partitioner
+# multiple-intiatives
 
 A FoundryVTT module that automatically creates multiple combatant entries on the initiative tracker when a specific minimum initiative value is rolled.
 
