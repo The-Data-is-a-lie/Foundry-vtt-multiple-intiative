@@ -45,6 +45,15 @@ Hooks.once("init", () => {
     default: 10
   });
 
+    game.settings.register("multiple-initiatives", "Natural1Debuff", {
+    name: "Nat 1 Debuff",
+    hint: "The amount to subtract from your total roll whenever you roll a natural 1 on your initiative roll",
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 10
+  });
+
   game.settings.register("multiple-initiatives", "partitionOffset", {
     name: "Initiative Offset",
     hint: "The amount to subtract for each extra turn(e.g., 20 for 50, 30, 10)",
@@ -111,6 +120,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let partitionCount = game.settings.get("multiple-initiatives", "partitionCount");
   let partitionOffset = game.settings.get("multiple-initiatives", "partitionOffset");
   let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
+  let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
 
   // Calculating d20 roll
   await new Promise(r => setTimeout(r, 50));
@@ -121,6 +131,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
   let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
   let isNat20 = d20Value >= 20 && d20Value < 21;
+  let isNat1 = d20Value < 2 && d20Value >= 1;
 
 
   // Adds a boost to the original roll if a natural 20 is detected
@@ -136,6 +147,27 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
             "multiple-initiatives": {
               ...(combatant.flags?.["multiple-initiatives"] || {}),
               natural20Applied: true
+            }
+          }
+        },
+        { fromPartition: true }
+      );
+    }
+  }
+
+  // Adds a debuff to the original roll if a natural 1 is detected
+  if (isNat1) {
+    console.log("multiple-initiatives | Natural 1 detected for", combatant.name);
+
+    // Prevent double-debuffing
+    if (!combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
+      await combatant.update(
+        {
+          initiative: totalRoll - Natural1Debuff,
+          flags: {
+            "multiple-initiatives": {
+              ...(combatant.flags?.["multiple-initiatives"] || {}),
+              natural1Applied: true
             }
           }
         },
