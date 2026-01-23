@@ -23,12 +23,7 @@ Hooks.once("init", () => {
     scope: "world",
     config: true,
     type: Number,
-    default: 21,
-    range: {
-      min: 1,
-      max: 10000,
-      step: 1
-    }
+    default: 21
   });
 
   game.settings.register("multiple-initiatives", "partitionCount", {
@@ -37,12 +32,17 @@ Hooks.once("init", () => {
     scope: "world",
     config: true,
     type: Number,
-    default: 99999,
-    range: {
-      min: 2,
-      max: 99999,
-      step: 1
-    }
+    default: 99999
+  });
+
+  
+  game.settings.register("multiple-initiatives", "Natural20Boost", {
+    name: "Nat 20 Boost",
+    hint: "The amount to add to your total roll whenever you roll a natural 20 on your initiative roll",
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 10
   });
 
   game.settings.register("multiple-initiatives", "partitionOffset", {
@@ -51,14 +51,10 @@ Hooks.once("init", () => {
     scope: "world",
     config: true,
     type: Number,
-    default: 20,
-    range: {
-      min: 1,
-      max: 99999,
-      step: 1
-    }
+    default: 20
   });
 });
+
 
 /**
  * Helper function to check if a combatant is a partition
@@ -114,6 +110,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let targetInitiative = game.settings.get("multiple-initiatives", "targetInitiative");
   let partitionCount = game.settings.get("multiple-initiatives", "partitionCount");
   let partitionOffset = game.settings.get("multiple-initiatives", "partitionOffset");
+  let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
 
   // Calculating d20 roll
   await new Promise(r => setTimeout(r, 50));
@@ -123,6 +120,12 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
   let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+
+  // // Check for Natural 20
+  // if (20 <= d20Value && d20Value <= 20.999999) {
+  //     console.log("Natural 20 detected on initiative roll for", combatant.name);
+  //   totalRoll += Natural20Boost;
+  // }
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
