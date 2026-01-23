@@ -28,11 +28,11 @@ Hooks.once("init", () => {
 
   game.settings.register("multiple-initiatives", "partitionCount", {
     name: "Max Number of Turns",
-    hint: "How many combatant entries to create (e.g., 3 for 50, 30, 10)",
+    hint: "How many combatant entries to create (e.g., 3 for 50, 30, 10). I've capped it, so it can't go above 10 otherwise it can severely lag foundryVTT.",
     scope: "world",
     config: true,
     type: Number,
-    default: 99999
+    default: 10
   });
 
   
@@ -92,9 +92,81 @@ async function cleanupPartitions(combat, originalCombatantId) {
   }
 }
 
-/**
- * Hook into combatant updates to detect initiative rolls
- */
+
+
+// // First Hook to add +10/-10 for Nat 20/1
+  Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
+      // Only process if enabled and if initiative was updated
+  if (!game.settings.get("multiple-initiatives", "enabled")) {
+    return;
+  }
+
+  // Skip if this is a partition or natural 20 duplicate (don't create from these)
+  if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
+    return;
+  }
+
+  // Check if initiative was updated
+  if (updateData.initiative === undefined) {
+    return;
+  }
+
+  // Skip if this update was triggered by our module
+  if (options.fromPartition) {
+    return;
+  }
+
+  let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
+  let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
+  // Calculating d20 roll
+  await new Promise(r => setTimeout(r, 50));
+  let totalRoll = updateData.initiative; // e.g., 40
+  let actor = combatant.actor;
+  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
+  let bonuses = initiativeMod; // The bonuses are the initiative modifier
+  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+  let isNat20 = d20Value >= 20 && d20Value < 21;
+  let isNat1 = d20Value < 2 && d20Value >= 1;
+
+  // Adds a boost to the original roll if a natural 20 is detected
+if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
+  await combatant.update(
+    {
+      initiative: totalRoll + Natural20Boost,
+      flags: {
+        "multiple-initiatives": {
+          ...(combatant.flags?.["multiple-initiatives"] || {}),
+          natural20Applied: true
+        }
+      }
+    },
+    { fromPartition: true }
+  );
+  return;
+}
+
+  // Adds a debuff to the original roll if a natural 1 is detected
+if (isNat1 && !combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
+  await combatant.update(
+    {
+      initiative: totalRoll - Natural1Debuff,
+      flags: {
+        "multiple-initiatives": {
+          ...(combatant.flags?.["multiple-initiatives"] || {}),
+          natural1Applied: true
+        }
+      }
+    },
+    { fromPartition: true }
+  );
+  return;
+}
+
+});
+
+
+  // // 2nd Hook to create multiple initiatives after natural 20/1 adjustments
+
 Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Only process if enabled and if initiative was updated
   if (!game.settings.get("multiple-initiatives", "enabled")) {
@@ -117,10 +189,8 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   }
 
   let targetInitiative = game.settings.get("multiple-initiatives", "targetInitiative");
-  let partitionCount = game.settings.get("multiple-initiatives", "partitionCount");
+  let partitionCount = Math.min(game.settings.get("multiple-initiatives", "partitionCount"), 10); // Cap at 10 to prevent infinite loops
   let partitionOffset = game.settings.get("multiple-initiatives", "partitionOffset");
-  let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
-  let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
 
   // Calculating d20 roll
   await new Promise(r => setTimeout(r, 50));
@@ -131,50 +201,6 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
   let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
   let isNat20 = d20Value >= 20 && d20Value < 21;
-  let isNat1 = d20Value < 2 && d20Value >= 1;
-
-
-  // Adds a boost to the original roll if a natural 20 is detected
-  if (isNat20) {
-    console.log("multiple-initiatives | Natural 20 detected for", combatant.name);
-
-    // Prevent double-boosting
-    if (!combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
-      await combatant.update(
-        {
-          initiative: totalRoll + Natural20Boost,
-          flags: {
-            "multiple-initiatives": {
-              ...(combatant.flags?.["multiple-initiatives"] || {}),
-              natural20Applied: true
-            }
-          }
-        },
-        { fromPartition: true }
-      );
-    }
-  }
-
-  // Adds a debuff to the original roll if a natural 1 is detected
-  if (isNat1) {
-    console.log("multiple-initiatives | Natural 1 detected for", combatant.name);
-
-    // Prevent double-debuffing
-    if (!combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
-      await combatant.update(
-        {
-          initiative: totalRoll - Natural1Debuff,
-          flags: {
-            "multiple-initiatives": {
-              ...(combatant.flags?.["multiple-initiatives"] || {}),
-              natural1Applied: true
-            }
-          }
-        },
-        { fromPartition: true }
-      );
-    }
-  }
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
@@ -272,8 +298,8 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     // Find the highest initiative value
     let highestInitiative = 100 + Math.max(...allRelatedCombatants.map(c => c.initiative || 0));
     
-    // Check if we already created a natural 20 duplicate
-    let hasNatural20Duplicate = allRelatedCombatants.some(c => 
+    // Check if we already created a natural 20 duplicate for this entire combat (once per combat)
+    let hasNatural20Duplicate = combat.combatants.some(c =>
       c.flags?.["multiple-initiatives"]?.natural20Duplicate === true
     );
     
@@ -305,6 +331,8 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     }
   }
 });
+
+
 
 /**
  * Hook into combat creation to handle initial initiative rolls
