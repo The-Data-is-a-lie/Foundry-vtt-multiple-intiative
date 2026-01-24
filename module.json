@@ -13,8 +13,8 @@
   "compatibleCoreVersion": "10.0.0",
   "scripts": [],
   "id": "multiple-initiatives",
-  "manifest":   "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/module.json",
-  "download":   "https://github.com/The-Data-is-a-lie/multiple-initiatives/archive/main.zip",
+  "manifest":   "https://raw.githubusercontent.com/The-Data-is-a-lie/multiple-initiatives/main/module.json",
+  "download":   "https://raw.githubusercontent.com/The-Data-is-a-lie/multiple-initiatives/main/downloads/multiple-initiatives.zip",
   "readme":     "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/README.md",
   "changelog":  "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/CHANGELOG.md"
 }

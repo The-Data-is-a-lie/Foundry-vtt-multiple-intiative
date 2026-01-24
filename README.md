@@ -8,7 +8,7 @@ A FoundryVTT module that automatically creates multiple combatant entries on the
 
 ## Installation
 
-1. Download from [FoundryVTT multiple initiatives](https://github.com/The-Data-is-a-lie/multiple-initiatives/archive/main.zip)
+1. Download from [FoundryVTT multiple initiatives](https://raw.githubusercontent.com/The-Data-is-a-lie/multiple-initiatives/main/downloads/multiple-initiatives.zip)
 
 ## Example
 
