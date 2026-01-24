@@ -168,6 +168,9 @@ async function cleanupPartitions(combat, originalCombatantId) {
   // // 2nd Hook to create multiple initiatives after natural 20/1 adjustments
 
 Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
+  // Only run on GM client to prevent duplicate executions
+  if (!game.user.isGM) return;
+
   // Only process if enabled and if initiative was updated
   if (!game.settings.get("multiple-initiatives", "enabled")) {
     return;
@@ -264,6 +267,9 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 });
 
 Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
+  // Only run on GM client to prevent duplicate executions
+  if (!game.user.isGM) return;
+
   await new Promise(r => setTimeout(r, 300));
   let totalRoll = updateData.initiative; // e.g., 40
   let actor = combatant.actor;
@@ -348,6 +354,9 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
  * Hook into combat creation to handle initial initiative rolls
  */
 Hooks.on("createCombatant", async (combatant, options, userId) => {
+  // Only run on GM client to prevent duplicate executions
+  if (!game.user.isGM) return;
+
   if (!game.settings.get("multiple-initiatives", "enabled")) {
     return;
   }
