@@ -94,6 +94,23 @@ async function cleanupPartitions(combat, originalCombatantId) {
 
 
 
+/**
+ * Clean up natural 20 duplicates at the start of round 2
+ */
+Hooks.on("updateCombat", async (combat, updateData, options, userId) => {
+  if (!game.user.isGM) return;
+  if (!game.settings.get("multiple-initiatives", "enabled")) return;
+
+  if (updateData.round !== undefined && combat.round > 1) {
+    let nat20Duplicates = combat.combatants.filter(c => c.name.toLowerCase().includes("nat 20"));
+    if (nat20Duplicates.length > 0) {
+      let idsToDelete = nat20Duplicates.map(c => c.id);
+      await combat.deleteEmbeddedDocuments("Combatant", idsToDelete);
+      console.log(`multiple-intiatives | Cleaned up ${idsToDelete.length} natural 20 duplicates at start of round ${combat.round}`);
+    }
+  }
+});
+
 // // First Hook to add +10/-10 for Nat 20/1
   Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Only run on GM client to prevent duplicate executions
@@ -269,22 +286,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
 });
 
-/**
- * Clean up natural 20 duplicates at the start of round 2
- */
-Hooks.on("updateCombat", async (combat, updateData, options, userId) => {
-  if (!game.user.isGM) return;
-  if (!game.settings.get("multiple-initiatives", "enabled")) return;
 
-  if (updateData.round !== undefined && combat.round > 1) {
-    let nat20Duplicates = combat.combatants.filter(c => c.name.toLowerCase().includes("nat 20"));
-    if (nat20Duplicates.length > 0) {
-      let idsToDelete = nat20Duplicates.map(c => c.id);
-      await combat.deleteEmbeddedDocuments("Combatant", idsToDelete);
-      console.log(`multiple-intiatives | Cleaned up ${idsToDelete.length} natural 20 duplicates at start of round ${combat.round}`);
-    }
-  }
-});
 
 
 Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
