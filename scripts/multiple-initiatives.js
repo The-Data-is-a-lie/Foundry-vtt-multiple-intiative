@@ -94,75 +94,78 @@ async function cleanupPartitions(combat, originalCombatantId) {
 
 
 
-// // // First Hook to add +10/-10 for Nat 20/1
-//   Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
-//       // Only process if enabled and if initiative was updated
-//   if (!game.settings.get("multiple-initiatives", "enabled")) {
-//     return;
-//   }
+// // First Hook to add +10/-10 for Nat 20/1
+  Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
+  // Only run on GM client to prevent duplicate executions
+  if (!game.user.isGM) return;
+  
+    // Only process if enabled and if initiative was updated
+  if (!game.settings.get("multiple-initiatives", "enabled")) {
+    return;
+  }
 
-//   // Skip if this is a partition or natural 20 duplicate (don't create from these)
-//   if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
-//     return;
-//   }
+  // Skip if this is a partition or natural 20 duplicate (don't create from these)
+  if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
+    return;
+  }
 
-//   // Check if initiative was updated
-//   if (updateData.initiative === undefined) {
-//     return;
-//   }
+  // Check if initiative was updated
+  if (updateData.initiative === undefined) {
+    return;
+  }
 
-//   // Skip if this update was triggered by our module
-//   if (options.fromPartition) {
-//     return;
-//   }
+  // Skip if this update was triggered by our module
+  if (options.fromPartition) {
+    return;
+  }
 
-//   let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
-//   let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
-//   // Calculating d20 roll
-//   await new Promise(r => setTimeout(r, 300));
-//   let totalRoll = updateData.initiative; // e.g., 40
-//   let actor = combatant.actor;
-//   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
-//   let bonuses = initiativeMod; // The bonuses are the initiative modifier
-//   let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
-//   let isNat20 = d20Value >= 20 && d20Value < 21;
-//   let isNat1 = d20Value < 2 && d20Value >= 1;
+  let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
+  let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
+  // Calculating d20 roll
+  await new Promise(r => setTimeout(r, 300));
+  let totalRoll = updateData.initiative; // e.g., 40
+  let actor = combatant.actor;
+  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
+  let bonuses = initiativeMod; // The bonuses are the initiative modifier
+  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+  let isNat20 = d20Value >= 20 && d20Value < 21;
+  let isNat1 = d20Value < 2 && d20Value >= 1;
 
-//   // Adds a boost to the original roll if a natural 20 is detected
-// if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
-//   await combatant.update(
-//     {
-//       initiative: totalRoll + Natural20Boost,
-//       flags: {
-//         "multiple-initiatives": {
-//           ...(combatant.flags?.["multiple-initiatives"] || {}),
-//           natural20Applied: true
-//         }
-//       }
-//     },
-//     { fromPartition: true }
-//   );
-//   return;
-// }
+  // Adds a boost to the original roll if a natural 20 is detected
+if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
+  await combatant.update(
+    {
+      initiative: totalRoll + Natural20Boost,
+      flags: {
+        "multiple-initiatives": {
+          ...(combatant.flags?.["multiple-initiatives"] || {}),
+          natural20Applied: true
+        }
+      }
+    },
+    { fromPartition: true }
+  );
+  return;
+}
 
-//   // Adds a debuff to the original roll if a natural 1 is detected
-// if (isNat1 && !combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
-//   await combatant.update(
-//     {
-//       initiative: totalRoll - Natural1Debuff,
-//       flags: {
-//         "multiple-initiatives": {
-//           ...(combatant.flags?.["multiple-initiatives"] || {}),
-//           natural1Applied: true
-//         }
-//       }
-//     },
-//     { fromPartition: true }
-//   );
-//   return;
-// }
+  // Adds a debuff to the original roll if a natural 1 is detected
+if (isNat1 && !combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
+  await combatant.update(
+    {
+      initiative: totalRoll - Natural1Debuff,
+      flags: {
+        "multiple-initiatives": {
+          ...(combatant.flags?.["multiple-initiatives"] || {}),
+          natural1Applied: true
+        }
+      }
+    },
+    { fromPartition: true }
+  );
+  return;
+}
 
-// });
+});
 
 
   // // 2nd Hook to create multiple initiatives after natural 20/1 adjustments
@@ -350,46 +353,63 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   }
 });
 
-/**
- * Hook into combat creation to handle initial initiative rolls
- */
-Hooks.on("createCombatant", async (combatant, options, userId) => {
-  // Only run on GM client to prevent duplicate executions
-  if (!game.user.isGM) return;
+// /**
+//  * Hook into combat creation to handle initial initiative rolls
+//  */
+// Hooks.on("createCombatant", async (combatant, options, userId) => {
+//   // Only run on GM client to prevent duplicate executions
+//   if (!game.user.isGM) return;
 
-  if (!game.settings.get("multiple-initiatives", "enabled")) {
-    return;
-  }
+//   if (!game.settings.get("multiple-initiatives", "enabled")) {
+//     return;
+//   }
 
-  // console.log("Edge Case 1 | createCombatant hook called, but partitioning is handled in updateCombatant");
+//   // console.log("Edge Case 1 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
-  // Check if this is a user-initiated creation (not from our module)
-  if (options.fromPartition) {
-    return;
-  }
+//   // Check if this is a user-initiated creation (not from our module)
+//   if (options.fromPartition) {
+//     return;
+//   }
 
-  // console.log("Edge Case 2 | createCombatant hook called, but partitioning is handled in updateCombatant");
+//   // console.log("Edge Case 2 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
-  // Skip if this is already a partition or natural 20 duplicate
-  if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
-    return;
-  }
+//   // Skip if this is already a partition or natural 20 duplicate
+//   if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
+//     return;
+//   }
 
-  // console.log("Edge Case 3 | createCombatant hook called, but partitioning is handled in updateCombatant");
+//   // console.log("Edge Case 3 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
-  // Only process if initiative is already set (not undefined/null)
-  // This prevents the hook from firing during combatant creation before initiative is rolled
-  if (combatant.initiative == null) {
-    return;
-  }
+//   // Only process if initiative is already set (not undefined/null)
+//   // This prevents the hook from firing during combatant creation before initiative is rolled
+//   if (combatant.initiative == null) {
+//     return;
+//   }
 
-  console.log("Edge Case 4 | createCombatant hook called, but partitioning is handled in updateCombatant");
+//   console.log("Edge Case 4 | createCombatant hook called, but partitioning is handled in updateCombatant");
 
-});
+// });
 /**
  * Clean up partitions when combat ends or is deleted
  */
 Hooks.on("deleteCombat", async (combat, options, userId) => {
   // Partitions will be automatically deleted with the combat, so no cleanup needed
   console.log("multiple-intiatives | Combat deleted, partitions cleaned up automatically");
+});
+
+/**
+ * Clean up natural 20 duplicates at the start of round 2
+ */
+Hooks.on("combatRound", async (combat, updateData, options, userId) => {
+  if (!game.user.isGM) return;
+  if (!game.settings.get("multiple-initiatives", "enabled")) return;
+
+  if (combat.round >= 2) {
+    let nat20Duplicates = combat.combatants.filter(c => c.name.toLowerCase().includes("nat 20"));
+    if (nat20Duplicates.length > 0) {
+      let idsToDelete = nat20Duplicates.map(c => c.id);
+      await combat.deleteEmbeddedDocuments("Combatant", idsToDelete);
+      console.log(`multiple-intiatives | Cleaned up ${idsToDelete.length} natural 20 duplicates at start of round ${combat.round}`);
+    }
+  }
 });
