@@ -113,33 +113,48 @@ Hooks.on("updateCombat", async (combat, updateData, options, userId) => {
       console.log(`multiple-intiatives | Cleaned up ${idsToDelete.length} natural 20 duplicates at start of round ${combat.round}`);
     }
   }
+
+  // Reset crit flags at the start of each round to allow re-application
+  if (updateData.round !== undefined) {
+    for (let combatant of combat.combatants) {
+      if (combatant.flags?.["multiple-initiatives"]) {
+        await combatant.update({
+          flags: {
+            "multiple-initiatives": {
+              ...combatant.flags["multiple-initiatives"],
+              natural20Applied: false,
+              natural1Applied: false
+            }
+          }
+        }, { fromPartition: true });
+      }
+    }
+    console.log(`multiple-intiatives | Reset crit flags for round ${combat.round}`);
+  }
 });
 
 // // First Hook to add +10/-10 for Nat 20/1
   Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Only run on GM client to prevent duplicate executions
   if (!game.user.isGM) return;
-  
     // Only process if enabled and if initiative was updated
   if (!game.settings.get("multiple-initiatives", "enableCrits")) {
     return;
   }
-
   // Skip if this is a partition or natural 20 duplicate (don't create from these)
   if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
     return;
   }
-
   // Check if initiative was updated
   if (updateData.initiative === undefined) {
     return;
   }
-
   // Skip if this update was triggered by our module
   if (options.fromPartition) {
     return;
   }
 
+  // Get settings
   let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
   let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
   // Calculating d20 roll
