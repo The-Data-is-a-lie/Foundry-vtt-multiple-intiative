@@ -1,6 +1,6 @@
 # multiple-intiatives
 
-A FoundryVTT module that automatically creates multiple combatant entries on the initiative tracker when a specific minimum initiative value is rolled.
+A FoundryVTT module that automatically creates multiple combatant entries on the initiative tracker when a specific minimum initiative bonus threshold is met.
 
 ## Features
 
@@ -36,7 +36,3 @@ a character with a +0 initiative rolls a 1:
 ## How It Works
 
 The module utilizes the updateCombatant, updateCombat, deleteCombat hooks in FoundryVTT's initiative system to manipulate initiative values in real time. When it detects that a combatant has rolled the target initiative value, it automatically creates additional combatant entries with the partitioned initiative values.
-
-## License
-
-MIT License - feel free to modify and distribute as needed.

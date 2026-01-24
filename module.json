@@ -13,7 +13,7 @@
   "compatibleCoreVersion": "10.0.0",
   "scripts": [],
   "id": "multiple-initiatives",
-  "manifest": "",
+  "manifest": "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/module.json",
   "download": "",
   "readme": "README.md",
   "changelog": "CHANGELOG.md"
