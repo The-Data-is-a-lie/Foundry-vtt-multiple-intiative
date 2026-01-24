@@ -202,7 +202,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let actorName = actor?.name || "Unknown";
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
-  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+  let d20Value = Math.round(totalRoll - initiativeMod - (bonuses / 100)); // Removing tie breaker logic (1% of Initiative Modifier)
   let isNat20 = d20Value >= 20 && d20Value < 21;
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
@@ -275,7 +275,7 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let actor = combatant.actor;
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
-  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+  let d20Value = Math.round(totalRoll - initiativeMod - (bonuses / 100)); // Removing tie breaker logic (1% of Initiative Modifier)
   let isNat20 = d20Value >= 20 && d20Value < 21;
 
   let actorName = actor?.name || "Unknown";
