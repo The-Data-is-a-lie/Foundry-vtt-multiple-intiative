@@ -15,6 +15,6 @@
   "id": "multiple-initiatives",
   "manifest": "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/module.json",
   "download": "",
-  "readme": "README.md",
-  "changelog": "CHANGELOG.md"
+  "readme": "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/README.md",
+  "changelog": "https://github.com/The-Data-is-a-lie/multiple-initiatives/blob/main/CHANGELOG.md"
 }
