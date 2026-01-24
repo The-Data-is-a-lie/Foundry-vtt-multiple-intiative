@@ -144,9 +144,10 @@ Hooks.on("updateCombat", async (combat, updateData, options, userId) => {
   let actor = combatant.actor;
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
-  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
-  let isNat20 = d20Value >= 20 && d20Value < 21;
-  let isNat1 = d20Value < 2 && d20Value >= 1;
+  let d20Value = Math.round(totalRoll - initiativeMod - (bonuses / 100)); // Removing tie breaker logic (1% of Initiative Modifier)
+
+  let isNat20 = d20Value >= 20  && d20Value < 21;
+  let isNat1  = d20Value >= 1   && d20Value < 2 ;
 
   // Adds a boost to the original roll if a natural 20 is detected
 if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
@@ -157,7 +158,7 @@ if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
         "multiple-initiatives": {
           ...(combatant.flags?.["multiple-initiatives"] || {}),
           natural20Applied: true
-        }
+        } 
       }
     },
     { fromPartition: true }
@@ -223,7 +224,6 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
   let bonuses = initiativeMod; // The bonuses are the initiative modifier
   let d20Value = Math.round(totalRoll - initiativeMod - (bonuses / 100)); // Removing tie breaker logic (1% of Initiative Modifier)
-  let isNat20 = d20Value >= 20 && d20Value < 21;
 
   console.log("totalRoll:", totalRoll, "d20Value:", d20Value, "bonuses:", bonuses);
 
