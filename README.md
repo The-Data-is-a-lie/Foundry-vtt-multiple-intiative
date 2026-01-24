@@ -8,7 +8,7 @@ A FoundryVTT module that automatically creates multiple combatant entries on the
 
 ## Installation
 
-1. Download from FoundryVTT multiple intiatives (link: )
+1. Download from [FoundryVTT multiple initiatives](https://github.com/The-Data-is-a-lie/multiple-initiatives/archive/main.zip)
 
 ## Example
 
@@ -22,7 +22,7 @@ With default settings:
  1) (on the first round only) He is given a 2nd turn, and it is boosted by +100
  2) His original roll (and the boosted roll) gain a +10
 
-a character with a +0 initiative rolls a 20:
+- When a character with a +0 initiative rolls a 20:
   (1st turn):
  - 130 (boosted)
  - 30 (original)
@@ -30,7 +30,7 @@ a character with a +0 initiative rolls a 20:
 - When a creature rolls a Natural 1, 1 thing happens:
 1) they receive a -10 to their total initiative roll
 
-a character with a +0 initiative rolls a 1:
+- When a character with a +0 initiative rolls a 1:
  - (-9) (debuffed)
 
 ## How It Works
