@@ -119,7 +119,7 @@ async function cleanupPartitions(combat, originalCombatantId) {
   let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
   let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
   // Calculating d20 roll
-  await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 300));
   let totalRoll = updateData.initiative; // e.g., 40
   let actor = combatant.actor;
   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
@@ -261,6 +261,18 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     }
   }
 
+});
+
+Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
+  await new Promise(r => setTimeout(r, 300));
+  let totalRoll = updateData.initiative; // e.g., 40
+  let actor = combatant.actor;
+  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
+  let bonuses = initiativeMod; // The bonuses are the initiative modifier
+  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+  let isNat20 = d20Value >= 20 && d20Value < 21;
+
+  let actorName = actor?.name || "Unknown";
   // Special case: Natural 20 on Turn 1 - create duplicate token with highest initiative
   // Check if the d20 roll itself was 20, not just the total
 
@@ -331,8 +343,6 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
     }
   }
 });
-
-
 
 /**
  * Hook into combat creation to handle initial initiative rolls
