@@ -1,7 +1,7 @@
 {
  "name": "multiple-initiatives",
   "title": "Pathfinder 1e Multiple Initiatives",
-  "description": "Automatically partitions initiative rolls into multiple combatant entries. When a creature rolls a specific initiative value, it creates multiple appearances on the initiative tracker with partitioned values.",
+  "description": "A FoundryVTT module that automatically creates multiple combatant entries on the initiative tracker when a specific minimum initiative bonus threshold is met.",
   "version": "1.0.0",
   "author": "TableTopSoftware",
   "esmodules": [ "scripts/multiple-initiatives.js"], 
