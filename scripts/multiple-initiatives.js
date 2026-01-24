@@ -36,23 +36,23 @@ Hooks.once("init", () => {
   });
 
   
-  game.settings.register("multiple-initiatives", "Natural20Boost", {
-    name: "Nat 20 Boost",
-    hint: "The amount to add to your total roll whenever you roll a natural 20 on your initiative roll",
-    scope: "world",
-    config: true,
-    type: Number,
-    default: 10
-  });
+  // game.settings.register("multiple-initiatives", "Natural20Boost", {
+  //   name: "Nat 20 Boost",
+  //   hint: "The amount to add to your total roll whenever you roll a natural 20 on your initiative roll",
+  //   scope: "world",
+  //   config: true,
+  //   type: Number,
+  //   default: 10
+  // });
 
-    game.settings.register("multiple-initiatives", "Natural1Debuff", {
-    name: "Nat 1 Debuff",
-    hint: "The amount to subtract from your total roll whenever you roll a natural 1 on your initiative roll",
-    scope: "world",
-    config: true,
-    type: Number,
-    default: 10
-  });
+  //   game.settings.register("multiple-initiatives", "Natural1Debuff", {
+  //   name: "Nat 1 Debuff",
+  //   hint: "The amount to subtract from your total roll whenever you roll a natural 1 on your initiative roll",
+  //   scope: "world",
+  //   config: true,
+  //   type: Number,
+  //   default: 10
+  // });
 
   game.settings.register("multiple-initiatives", "partitionOffset", {
     name: "Initiative Offset",
@@ -94,75 +94,75 @@ async function cleanupPartitions(combat, originalCombatantId) {
 
 
 
-// // First Hook to add +10/-10 for Nat 20/1
-  Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
-      // Only process if enabled and if initiative was updated
-  if (!game.settings.get("multiple-initiatives", "enabled")) {
-    return;
-  }
+// // // First Hook to add +10/-10 for Nat 20/1
+//   Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
+//       // Only process if enabled and if initiative was updated
+//   if (!game.settings.get("multiple-initiatives", "enabled")) {
+//     return;
+//   }
 
-  // Skip if this is a partition or natural 20 duplicate (don't create from these)
-  if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
-    return;
-  }
+//   // Skip if this is a partition or natural 20 duplicate (don't create from these)
+//   if (isPartition(combatant) || combatant.flags?.["multiple-initiatives"]?.natural20Duplicate === true) {
+//     return;
+//   }
 
-  // Check if initiative was updated
-  if (updateData.initiative === undefined) {
-    return;
-  }
+//   // Check if initiative was updated
+//   if (updateData.initiative === undefined) {
+//     return;
+//   }
 
-  // Skip if this update was triggered by our module
-  if (options.fromPartition) {
-    return;
-  }
+//   // Skip if this update was triggered by our module
+//   if (options.fromPartition) {
+//     return;
+//   }
 
-  let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
-  let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
-  // Calculating d20 roll
-  await new Promise(r => setTimeout(r, 300));
-  let totalRoll = updateData.initiative; // e.g., 40
-  let actor = combatant.actor;
-  let initiativeMod = actor?.system?.attributes?.init?.total || 0;
-  let bonuses = initiativeMod; // The bonuses are the initiative modifier
-  let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
-  let isNat20 = d20Value >= 20 && d20Value < 21;
-  let isNat1 = d20Value < 2 && d20Value >= 1;
+//   let Natural20Boost = game.settings.get("multiple-initiatives", "Natural20Boost");
+//   let Natural1Debuff = game.settings.get("multiple-initiatives", "Natural1Debuff");
+//   // Calculating d20 roll
+//   await new Promise(r => setTimeout(r, 300));
+//   let totalRoll = updateData.initiative; // e.g., 40
+//   let actor = combatant.actor;
+//   let initiativeMod = actor?.system?.attributes?.init?.total || 0;
+//   let bonuses = initiativeMod; // The bonuses are the initiative modifier
+//   let d20Value = totalRoll - initiativeMod - (bonuses / 100); // Removing tie breaker logic (1% of Initiative Modifier)
+//   let isNat20 = d20Value >= 20 && d20Value < 21;
+//   let isNat1 = d20Value < 2 && d20Value >= 1;
 
-  // Adds a boost to the original roll if a natural 20 is detected
-if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
-  await combatant.update(
-    {
-      initiative: totalRoll + Natural20Boost,
-      flags: {
-        "multiple-initiatives": {
-          ...(combatant.flags?.["multiple-initiatives"] || {}),
-          natural20Applied: true
-        }
-      }
-    },
-    { fromPartition: true }
-  );
-  return;
-}
+//   // Adds a boost to the original roll if a natural 20 is detected
+// if (isNat20 && !combatant.flags?.["multiple-initiatives"]?.natural20Applied) {
+//   await combatant.update(
+//     {
+//       initiative: totalRoll + Natural20Boost,
+//       flags: {
+//         "multiple-initiatives": {
+//           ...(combatant.flags?.["multiple-initiatives"] || {}),
+//           natural20Applied: true
+//         }
+//       }
+//     },
+//     { fromPartition: true }
+//   );
+//   return;
+// }
 
-  // Adds a debuff to the original roll if a natural 1 is detected
-if (isNat1 && !combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
-  await combatant.update(
-    {
-      initiative: totalRoll - Natural1Debuff,
-      flags: {
-        "multiple-initiatives": {
-          ...(combatant.flags?.["multiple-initiatives"] || {}),
-          natural1Applied: true
-        }
-      }
-    },
-    { fromPartition: true }
-  );
-  return;
-}
+//   // Adds a debuff to the original roll if a natural 1 is detected
+// if (isNat1 && !combatant.flags?.["multiple-initiatives"]?.natural1Applied) {
+//   await combatant.update(
+//     {
+//       initiative: totalRoll - Natural1Debuff,
+//       flags: {
+//         "multiple-initiatives": {
+//           ...(combatant.flags?.["multiple-initiatives"] || {}),
+//           natural1Applied: true
+//         }
+//       }
+//     },
+//     { fromPartition: true }
+//   );
+//   return;
+// }
 
-});
+// });
 
 
   // // 2nd Hook to create multiple initiatives after natural 20/1 adjustments
