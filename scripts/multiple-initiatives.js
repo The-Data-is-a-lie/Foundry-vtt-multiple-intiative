@@ -36,23 +36,23 @@ Hooks.once("init", () => {
   });
 
   
-  // game.settings.register("multiple-initiatives", "Natural20Boost", {
-  //   name: "Nat 20 Boost",
-  //   hint: "The amount to add to your total roll whenever you roll a natural 20 on your initiative roll",
-  //   scope: "world",
-  //   config: true,
-  //   type: Number,
-  //   default: 10
-  // });
+  game.settings.register("multiple-initiatives", "Natural20Boost", {
+    name: "Nat 20 Boost",
+    hint: "The amount to add to your total roll whenever you roll a natural 20 on your initiative roll",
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 10
+  });
 
-  //   game.settings.register("multiple-initiatives", "Natural1Debuff", {
-  //   name: "Nat 1 Debuff",
-  //   hint: "The amount to subtract from your total roll whenever you roll a natural 1 on your initiative roll",
-  //   scope: "world",
-  //   config: true,
-  //   type: Number,
-  //   default: 10
-  // });
+    game.settings.register("multiple-initiatives", "Natural1Debuff", {
+    name: "Nat 1 Debuff",
+    hint: "The amount to subtract from your total roll whenever you roll a natural 1 on your initiative roll",
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 10
+  });
 
   game.settings.register("multiple-initiatives", "partitionOffset", {
     name: "Initiative Offset",
@@ -269,6 +269,24 @@ Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
 
 });
 
+/**
+ * Clean up natural 20 duplicates at the start of round 2
+ */
+Hooks.on("updateCombat", async (combat, updateData, options, userId) => {
+  if (!game.user.isGM) return;
+  if (!game.settings.get("multiple-initiatives", "enabled")) return;
+
+  if (updateData.round !== undefined && combat.round > 1) {
+    let nat20Duplicates = combat.combatants.filter(c => c.name.toLowerCase().includes("nat 20"));
+    if (nat20Duplicates.length > 0) {
+      let idsToDelete = nat20Duplicates.map(c => c.id);
+      await combat.deleteEmbeddedDocuments("Combatant", idsToDelete);
+      console.log(`multiple-intiatives | Cleaned up ${idsToDelete.length} natural 20 duplicates at start of round ${combat.round}`);
+    }
+  }
+});
+
+
 Hooks.on("updateCombatant", async (combatant, updateData, options, userId) => {
   // Only run on GM client to prevent duplicate executions
   if (!game.user.isGM) return;
@@ -397,19 +415,3 @@ Hooks.on("deleteCombat", async (combat, options, userId) => {
   console.log("multiple-intiatives | Combat deleted, partitions cleaned up automatically");
 });
 
-/**
- * Clean up natural 20 duplicates at the start of round 2
- */
-Hooks.on("combatRound", async (combat, updateData, options, userId) => {
-  if (!game.user.isGM) return;
-  if (!game.settings.get("multiple-initiatives", "enabled")) return;
-
-  if (combat.round >= 2) {
-    let nat20Duplicates = combat.combatants.filter(c => c.name.toLowerCase().includes("nat 20"));
-    if (nat20Duplicates.length > 0) {
-      let idsToDelete = nat20Duplicates.map(c => c.id);
-      await combat.deleteEmbeddedDocuments("Combatant", idsToDelete);
-      console.log(`multiple-intiatives | Cleaned up ${idsToDelete.length} natural 20 duplicates at start of round ${combat.round}`);
-    }
-  }
-});
